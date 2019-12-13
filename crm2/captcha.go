@@ -350,6 +350,54 @@ func (c *Captcha) Train(capimgs []image.Image, trainFile interface{}) (map[Alpha
 	return trainModule, nil
 }
 
+func (c *Captcha) Train23(capimgs []image.Image, trainFile, verifyFile interface{}) (map[Alpha][]BinaryImage, error) {
+
+	var err error
+	trainModule := make(map[Alpha][]BinaryImage)
+
+	if trainFile != nil {
+		trainModule, err = c.LoadTrainModule(trainFile.(string))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	readfile, err := os.Open(verifyFile.(string))
+	if err != nil {
+		return nil, err
+	}
+
+	defer readfile.Close()
+
+	reader := bufio.NewReader(readfile)
+
+	for i := 0; i < len(capimgs); i++ {
+		captch, _, _ := reader.ReadLine()
+		fmt.Println(string(captch))
+
+		capbinimg := c.Binarify(capimgs[i])
+		fmt.Println(capbinimg)
+
+		binimges := capbinimg.CropSubImgNoPanic(c.N)
+		if binimges == nil {
+			fmt.Println("crop failed, next")
+			continue
+		}
+
+		// 将输入的验证码与crop关联存入训练module
+		for n := 0; n < c.N; n++ {
+			alpha := Alpha(captch[n])
+			if _, ok := trainModule[alpha]; ok {
+				trainModule[alpha] = append(trainModule[alpha], binimges[n])
+			} else {
+				trainModule[alpha] = []BinaryImage{binimges[n]}
+			}
+		}
+	}
+
+	return trainModule, nil
+}
+
 // 标准模板检查 测试训练后缺少哪些字符
 func (c *Captcha) StdModuleCheck(stdModule map[Alpha]BinaryImage, show bool) []byte {
 	lacks := make([]byte, 0, 62)

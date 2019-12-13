@@ -2,7 +2,6 @@ package crm2
 
 import (
 	"bytes"
-	"fmt"
 	"image"
 	"strconv"
 )
