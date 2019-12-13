@@ -350,7 +350,7 @@ func (c *Captcha) Train(capimgs []image.Image, trainFile interface{}) (map[Alpha
 	return trainModule, nil
 }
 
-func (c *Captcha) Train23(capimgs []image.Image, trainFile, verifyFile interface{}) (map[Alpha][]BinaryImage, error) {
+func (c *Captcha) TrainFromVerifyFile(capimgs []image.Image, trainFile, verifyFile interface{}) (map[Alpha][]BinaryImage, error) {
 
 	var err error
 	trainModule := make(map[Alpha][]BinaryImage)
