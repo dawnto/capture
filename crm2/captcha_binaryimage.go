@@ -2,12 +2,10 @@ package crm2
 
 import (
 	"bytes"
-	"fmt"
 	"image"
 	"strconv"
 )
 
-// 脚的 定义成内嵌 [][]int 的struct更方便,懒得改了
 type BinaryImage [][]int
 
 // !panic
@@ -17,10 +15,12 @@ func (bi BinaryImage) String() string {
 	if h < 1 {
 		panic("len(binimg) < 1")
 	}
+
 	w := len(binimg[0])
 	if w < 1 {
 		panic("len(binimg[0] < 1")
 	}
+
 	return bi.RectString(image.Rect(0, 0, w-1, h-1))
 }
 
@@ -29,16 +29,19 @@ func (bi BinaryImage) RectString(rect image.Rectangle) string {
 	buf := bytes.NewBuffer(nil)
 	for y, maxy := rect.Min.Y, rect.Max.Y; y <= maxy; y++ {
 		for x, maxx := rect.Min.X, rect.Max.X; x <= maxx; x++ {
-			/*_, err := */ buf.WriteString(strconv.Itoa(binimg[y][x]))
+			buf.WriteString(strconv.Itoa(binimg[y][x]))
 		}
+
 		buf.WriteByte('\n')
 	}
+
 	return buf.String()
 }
 
 // 返回sub BinaryImage
 func (bi BinaryImage) SubBinaryImage(rect image.Rectangle) BinaryImage {
 	binimg := BinaryImage(bi)
+
 	h, w := rect.Size().Y+1, rect.Size().X+1
 
 	// init
@@ -51,17 +54,21 @@ func (bi BinaryImage) SubBinaryImage(rect image.Rectangle) BinaryImage {
 	for y := 0; y < h; y++ {
 		copy(newbi[y], binimg[rect.Min.Y+y][rect.Min.X:rect.Max.X+1])
 	}
+
 	return BinaryImage(newbi)
 }
 
 // !panic 数组越界 返回切割成n块的区域
 func (bi BinaryImage) CropRect(n int) []image.Rectangle {
 	rectes := make([]image.Rectangle, n, n)
+
 	binimg := [][]int(bi)
+
 	maxY := len(binimg)
 	if maxY == 0 {
 		panic("empty binaryimage : h == 0")
 	}
+
 	maxX := len(binimg[0])
 	if maxX == 0 {
 		panic("empty binaryimage : w == 0")
@@ -77,8 +84,8 @@ func (bi BinaryImage) CropRect(n int) []image.Rectangle {
 		}
 	}
 
-	minXs := make([]int, 0, 6)
-	maxXs := make([]int, 0, 6)
+	minXs := make([]int, 0, n)
+	maxXs := make([]int, 0, n)
 	// 验证码可能在最后竖列,(暂时未发现可能在第一竖列)
 	// bug 必须连续两竖排才OK --> 小写I 不对
 	// bug 不能处理不连续的...
@@ -118,17 +125,17 @@ func (bi BinaryImage) CropRect(n int) []image.Rectangle {
 		maxXs = append(maxXs, maxX-1)
 	}
 
-	if len(maxXs) != 6 || len(minXs) != 6 {
-		panic(fmt.Sprintf("len(maxXs) = %d || len(minXs) = %d", len(maxXs), len(minXs)))
-	}
+	// if len(maxXs) != n || len(minXs) != n {
+	// 	panic(fmt.Sprintf("len(maxXs) = %d || len(minXs) = %d", len(maxXs), len(minXs)))
+	// }
 
-	for i := 0; i < 6; i++ {
+	for i := 0; i < n; i++ {
 		rectes[i] = image.Rectangle{image.Point{minXs[i], 0}, image.Point{maxXs[i], 0}}
 	}
 
 	// 针对每个x区域扫描y
 	YS := make([]bool, maxY, maxY)
-	for i := 0; i < 6; i++ {
+	for i := 0; i < n; i++ {
 
 		for y := 0; y < maxY; y++ {
 			for x := rectes[i].Min.X; x < rectes[i].Max.X; x++ {
@@ -150,12 +157,14 @@ func (bi BinaryImage) CropRect(n int) []image.Rectangle {
 				break
 			}
 		}
+
 		for y, l := maxY-2, maxY>>1; y > l; y-- {
 			if YS[y-1] && YS[y] && !YS[y+1] { // 连续
 				rectes[i].Max.Y = y + 1
 				break
 			}
 		}
+
 		// 边缘
 		if YS[maxY-2] && YS[maxY-1] {
 			rectes[i].Max.Y = maxY - 1
@@ -166,43 +175,52 @@ func (bi BinaryImage) CropRect(n int) []image.Rectangle {
 			YS[j] = false
 		}
 	}
+
 	return rectes
 }
 
 // !panic 返回n块复制的切割区域
 func (bi BinaryImage) CropSubImg(n int) []BinaryImage {
 	rectes := bi.CropRect(n)
+
 	subbis := make([]BinaryImage, n, n)
 	for i := 0; i < n; i++ {
 		subbis[i] = bi.SubBinaryImage(rectes[i])
 	}
+
 	return subbis
 }
 
 func (bi BinaryImage) CropSubImgNoPanic(n int) (subbis []BinaryImage) {
 	subbis = make([]BinaryImage, n, n)
+
 	defer func() {
 		if recover() != nil {
 			subbis = nil
 		}
 	}()
+
 	return bi.CropSubImg(n)
 }
 
 // !panic(未检测BinaryImage是否为空) 计算相似度 <= 5 相似 大于 10 不同
 func (bi BinaryImage) Similarity(anobi BinaryImage) int {
 	a, b := [][]int(bi), [][]int(anobi)
+
 	var h, w int
+
 	if ha, hb := len(a), len(b); ha < hb {
 		h = ha
 	} else {
 		h = hb
 	}
+
 	if wa, wb := len(a[0]), len(b[0]); wa < wb {
 		w = wa
 	} else {
 		w = wb
 	}
+
 	pfa := bi.FingerPrint(h, w)
 	pfb := anobi.FingerPrint(h, w)
 
@@ -212,10 +230,12 @@ func (bi BinaryImage) Similarity(anobi BinaryImage) int {
 // !panic(未检测BinaryImage是否为空) 计算指纹
 func (bi BinaryImage) FingerPrint(h, w int) []byte {
 	binimg := [][]int(bi)
+
 	var (
 		sum float32
 		avg float32
 	)
+
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
 			sum += float32(binimg[y][x])
@@ -235,5 +255,6 @@ func (bi BinaryImage) FingerPrint(h, w int) []byte {
 			}
 		}
 	}
+
 	return buf.Bytes()
 }

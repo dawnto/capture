@@ -14,16 +14,15 @@ type Alpha byte
 
 // 仅支持大小写字母与数字
 type Captcha struct {
-	N         int // 验证码图片字符数量
-	Threshold int // 阈值 34000
-	StdModule map[Alpha]BinaryImage
+	N         int                   // 验证码图片字符数量
+	Threshold int                   // 阈值 34000
+	StdModule map[Alpha]BinaryImage //
 }
 
 // constructor
-func NewCaptcha( /*image image.Image,*/ threshold, n int) *Captcha {
+func NewCaptcha(threshold, n int) *Captcha {
 	return &Captcha{
-		N: n,
-		// Image:     image,
+		N:         n,
 		Threshold: threshold,
 	}
 }
@@ -52,6 +51,7 @@ func (c *Captcha) Binarify(img image.Image) BinaryImage {
 			}
 		}
 	}
+
 	return BinaryImage(binimg)
 }
 
@@ -66,15 +66,19 @@ func (c *Captcha) decodeModuleFile(moduleFile string, to interface{}) error {
 	if err != nil {
 		return err
 	}
+
 	defer f.Close()
+
 	en, err := ioutil.ReadAll(f)
 	if err != nil {
 		return err
 	}
+
 	err = ByteDecode(en, to)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -84,6 +88,7 @@ func (c *Captcha) encodeModuleFile(module interface{}, moduleFile string) error 
 	if err != nil {
 		return err
 	}
+
 	defer f.Close()
 
 	en, err := ByteEncode(module)
@@ -95,6 +100,7 @@ func (c *Captcha) encodeModuleFile(module interface{}, moduleFile string) error 
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -105,7 +111,9 @@ func (c *Captcha) LoadStdModule(stdfile string) (map[Alpha]BinaryImage, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	c.ImportStdModule(stdModule)
+
 	return stdModule, nil
 }
 
@@ -114,6 +122,7 @@ func (c *Captcha) UpdateStdModule(a Alpha, binimg BinaryImage) {
 	if c.StdModule == nil {
 		panic("must improtStdModule first")
 	}
+
 	c.StdModule[a] = binimg
 }
 
@@ -125,10 +134,12 @@ func (c *Captcha) SaveStdModule(stdModule map[Alpha]BinaryImage, stdfile string)
 // 载入训练文件
 func (c *Captcha) LoadTrainModule(trainFile string) (map[Alpha][]BinaryImage, error) {
 	trainModule := make(map[Alpha][]BinaryImage)
+
 	err := c.decodeModuleFile(trainFile, &trainModule)
 	if err != nil {
 		return nil, err
 	}
+
 	return trainModule, nil
 }
 
@@ -143,11 +154,13 @@ func (c *Captcha) ManualGenStdModuleFromFile(trainFileFrom string) (map[Alpha]Bi
 	if err != nil {
 		return nil, err
 	}
+
 	stdModule := make(map[Alpha]BinaryImage)
 
 	for alpha, binimges := range trainModule {
 		stdModule[alpha] = binimges[c.manualFindMatchest(alpha, binimges)]
 	}
+
 	return stdModule, nil
 }
 
@@ -169,6 +182,7 @@ func (c *Captcha) manualFindMatchest(alpha Alpha, binimges []BinaryImage) int {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	return index
 }
 
@@ -178,6 +192,7 @@ func (c *Captcha) AutoGenStdModuleFromFile(trainFileFrom string) (map[Alpha]Bina
 	if err != nil {
 		return nil, err
 	}
+
 	return c.AutoGenStdModuleFromMemory(trainModule)
 }
 
@@ -188,6 +203,7 @@ func (c *Captcha) AutoGenStdModuleFromMemory(trainModule map[Alpha][]BinaryImage
 	for alpha, binimges := range trainModule {
 		stdModule[alpha] = binimges[c.autoFindMatchest(binimges)]
 	}
+
 	return stdModule, nil
 }
 
@@ -275,14 +291,17 @@ func (c *Captcha) autoFindMatchest(binimges []BinaryImage) int {
 			}
 		}
 	}
+
 	return minIndex
 }
 
 // 从已有文件导入训练或者重新(trainFile = nil)训练模板,返回训练模板 未写入文件 需手动调用 SaveTrainModule
 func (c *Captcha) Train(capimgs []image.Image, trainFile interface{}) (map[Alpha][]BinaryImage, error) {
+
+	var err error
 	trainModule := make(map[Alpha][]BinaryImage)
+
 	if trainFile != nil {
-		var err error
 		trainModule, err = c.LoadTrainModule(trainFile.(string))
 		if err != nil {
 			return nil, err
@@ -290,6 +309,7 @@ func (c *Captcha) Train(capimgs []image.Image, trainFile interface{}) (map[Alpha
 	}
 
 	r := bufio.NewReader(os.Stdin)
+
 	for i, l := 0, len(capimgs); i < l; i++ {
 
 		capbinimg := c.Binarify(capimgs[i])
@@ -298,22 +318,24 @@ func (c *Captcha) Train(capimgs []image.Image, trainFile interface{}) (map[Alpha
 		fmt.Println("enter captcha: ")
 
 	input:
-		captch, err := r.ReadSlice('\n')
-		// fmt.Println(len(captch)) // 8 = 6+ \n \ r
+		captch, err := r.ReadSlice('\n') // 最后的 \r\n
 		if len(captch) != (c.N + 2) {
 			fmt.Println("len(captch) != c.N")
 			goto input
 		}
+
 		if err != nil {
 			fmt.Println(err)
 			goto input
 		}
+
 		binimges := capbinimg.CropSubImgNoPanic(c.N)
 
 		if binimges == nil {
-			fmt.Println("crop failed,next")
+			fmt.Println("crop failed, next")
 			continue
 		}
+
 		// 将输入的验证码与crop关联存入训练module
 		for n := 0; n < c.N; n++ {
 			alpha := Alpha(captch[n])
@@ -323,8 +345,8 @@ func (c *Captcha) Train(capimgs []image.Image, trainFile interface{}) (map[Alpha
 				trainModule[alpha] = []BinaryImage{binimges[n]}
 			}
 		}
-
 	}
+
 	return trainModule, nil
 }
 
@@ -370,6 +392,7 @@ func (c *Captcha) StdModuleCheck(stdModule map[Alpha]BinaryImage, show bool) []b
 	if show {
 		fmt.Println()
 	}
+
 	return lacks
 }
 
@@ -378,6 +401,7 @@ func (c *Captcha) ImportStdModule(stdModule map[Alpha]BinaryImage) {
 	if c.StdModule == nil {
 		c.StdModule = make(map[Alpha]BinaryImage)
 	}
+
 	c.StdModule = stdModule
 }
 
@@ -387,8 +411,9 @@ func (c *Captcha) Recognize(img image.Image) string {
 		panic("must improtStdModule first")
 	}
 
-	cropsBinimgs := c.Binarify(img).CropSubImg(c.N)
 	var recognized = make([]byte, c.N, c.N)
+
+	cropsBinimgs := c.Binarify(img).CropSubImg(c.N)
 
 	for i := 0; i < c.N; i++ {
 
@@ -407,5 +432,6 @@ func (c *Captcha) Recognize(img image.Image) string {
 
 		recognized[i] = byte(A)
 	}
+
 	return string(recognized)
 }

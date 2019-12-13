@@ -13,14 +13,17 @@ import (
 // !panic 计算字节数组汉明距离  n <= 5 true n > 10 false
 func Hamming(a, b []byte) (n int) {
 	l := len(a)
+
 	if l != len(b) {
 		panic(fmt.Errorf("Hamming len(a)[%d] != len(b)[%d]", l, len(b)))
 	}
+
 	for i := 0; i < l; i++ {
 		if a[i] != b[i] {
 			n += 1
 		}
 	}
+
 	return
 }
 
@@ -30,10 +33,12 @@ func ReadImg(imgFile string) (image.Image, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	img, err := jpeg.Decode(f)
 	if err != nil {
 		return nil, err
 	}
+
 	return img, nil
 }
 
@@ -41,10 +46,12 @@ func ReadImg(imgFile string) (image.Image, error) {
 func ByteEncode(data interface{}) ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 	enc := gob.NewEncoder(buf)
+
 	err := enc.Encode(data)
 	if err != nil {
 		return nil, err
 	}
+
 	return buf.Bytes(), nil
 }
 
