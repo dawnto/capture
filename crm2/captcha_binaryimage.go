@@ -117,7 +117,7 @@ func (bi BinaryImage) CropRect(n int) []image.Rectangle {
 
 	// 最后一竖列
 	// todo 最后也必须验证三个
-	if len(maxXs) == 5 && XS[maxX-2] && XS[maxX-1] {
+	if len(maxXs) == n-1 && XS[maxX-2] && XS[maxX-1] {
 		maxXs = append(maxXs, maxX-1)
 	}
 
