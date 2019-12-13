@@ -28,7 +28,7 @@ func Hamming(a, b []byte) (n int) {
 }
 
 // 从文件读取imgage
-func ReadImg(imgFile string) (image.Image, error) {
+func ReadImage(imgFile string) (image.Image, error) {
 	f, err := os.Open(imgFile)
 	if err != nil {
 		return nil, err
