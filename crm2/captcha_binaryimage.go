@@ -2,6 +2,7 @@ package crm2
 
 import (
 	"bytes"
+	"fmt"
 	"image"
 	"strconv"
 )
@@ -60,15 +61,11 @@ func (bi BinaryImage) SubBinaryImage(rect image.Rectangle) BinaryImage {
 
 // !panic 数组越界 返回切割成n块的区域
 func (bi BinaryImage) CropRect(n int) []image.Rectangle {
-	rectes := make([]image.Rectangle, n, n)
-
 	binimg := [][]int(bi)
-
 	maxY := len(binimg)
 	if maxY == 0 {
 		panic("empty binaryimage : h == 0")
 	}
-
 	maxX := len(binimg[0])
 	if maxX == 0 {
 		panic("empty binaryimage : w == 0")
@@ -128,6 +125,8 @@ func (bi BinaryImage) CropRect(n int) []image.Rectangle {
 	// if len(maxXs) != n || len(minXs) != n {
 	// 	panic(fmt.Sprintf("len(maxXs) = %d || len(minXs) = %d", len(maxXs), len(minXs)))
 	// }
+
+	rectes := make([]image.Rectangle, n, n)
 
 	for i := 0; i < n; i++ {
 		rectes[i] = image.Rectangle{image.Point{minXs[i], 0}, image.Point{maxXs[i], 0}}
