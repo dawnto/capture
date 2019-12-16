@@ -2,6 +2,7 @@ package crm2
 
 import (
 	"bytes"
+	"fmt"
 	"image"
 	"strconv"
 )
@@ -61,10 +62,12 @@ func (bi BinaryImage) SubBinaryImage(rect image.Rectangle) BinaryImage {
 // !panic 数组越界 返回切割成n块的区域
 func (bi BinaryImage) CropRect(n int) []image.Rectangle {
 	binimg := [][]int(bi)
+
 	maxY := len(binimg)
 	if maxY == 0 {
 		panic("empty binaryimage : h == 0")
 	}
+
 	maxX := len(binimg[0])
 	if maxX == 0 {
 		panic("empty binaryimage : w == 0")
@@ -82,16 +85,8 @@ func (bi BinaryImage) CropRect(n int) []image.Rectangle {
 
 	minXs := make([]int, 0, n)
 	maxXs := make([]int, 0, n)
-	// 验证码可能在最后竖列,(暂时未发现可能在第一竖列)
-	// bug 必须连续两竖排才OK --> 小写I 不对
-	// bug 不能处理不连续的...
 	for x := 1; x < maxX-1; x++ {
 		switch {
-		// case : // 不连续,暂时不考虑边缘数组越界
-		//
-		// case : // 不连续,暂时不考虑边缘数组越界
-		//
-
 		case !XS[x-1] && XS[x] && XS[x+1]: // 连续
 			minXs = append(minXs, x-1)
 		case XS[x-1] && XS[x] && !XS[x+1]: // 连续
@@ -99,14 +94,14 @@ func (bi BinaryImage) CropRect(n int) []image.Rectangle {
 		case !XS[x-1] && XS[x] && !XS[x+1]: // 小写I
 			count := 0
 			for y := 0; y < maxY; y++ {
-				// 中间像素>10,两旁无像素
 				if binimg[y][x-1] == 1 || binimg[y][x+1] == 1 {
 					goto end
 				}
-				if binimg[y][x] == 1 { // black
+				if binimg[y][x] == 1 {
 					count++
 				}
 			}
+			// 中间像素>10，两旁无像素
 			if count >= 10 {
 				minXs = append(minXs, x-1)
 				maxXs = append(maxXs, x+1)
@@ -115,26 +110,21 @@ func (bi BinaryImage) CropRect(n int) []image.Rectangle {
 		}
 	}
 
-	// 最后一竖列
-	// todo 最后也必须验证三个
-	if len(maxXs) == n-1 && XS[maxX-2] && XS[maxX-1] {
+	if len(maxXs) == n-1 && XS[maxX-2] && XS[maxX-1] { // 最后一竖列
 		maxXs = append(maxXs, maxX-1)
 	}
 
-	// if len(maxXs) != n || len(minXs) != n {
-	// 	panic(fmt.Sprintf("len(maxXs) = %d || len(minXs) = %d", len(maxXs), len(minXs)))
-	// }
+	if len(maxXs) != n || len(minXs) != n {
+		panic(fmt.Sprintf("len(maxXs) = %d || len(minXs) = %d", len(maxXs), len(minXs)))
+	}
 
 	rectes := make([]image.Rectangle, n, n)
-
 	for i := 0; i < n; i++ {
 		rectes[i] = image.Rectangle{image.Point{minXs[i], 0}, image.Point{maxXs[i], 0}}
 	}
 
-	// 针对每个x区域扫描y
-	YS := make([]bool, maxY, maxY)
+	YS := make([]bool, maxY, maxY) // 针对每个x区域扫描y
 	for i := 0; i < n; i++ {
-
 		for y := 0; y < maxY; y++ {
 			for x := rectes[i].Min.X; x < rectes[i].Max.X; x++ {
 				if binimg[y][x] == 1 {
@@ -143,11 +133,6 @@ func (bi BinaryImage) CropRect(n int) []image.Rectangle {
 				}
 			}
 		}
-
-		// bug : 未考虑最后一个
-		// 验证码可能在第一横行和最后一横行,所以必须考虑特殊情况
-		// 扩展1像素 ??
-		// 验证三个 小写I 不对
 
 		for y, l := 1, maxY>>1; y < l; y++ {
 			if !YS[y-1] && YS[y] && YS[y+1] { // 连续
@@ -163,13 +148,11 @@ func (bi BinaryImage) CropRect(n int) []image.Rectangle {
 			}
 		}
 
-		// 边缘
-		if YS[maxY-2] && YS[maxY-1] {
+		if YS[maxY-2] && YS[maxY-1] { // 边缘
 			rectes[i].Max.Y = maxY - 1
 		}
 
-		// YS Reset
-		for j := 0; j < maxY; j++ {
+		for j := 0; j < maxY; j++ { // YS Reset
 			YS[j] = false
 		}
 	}
